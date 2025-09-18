@@ -29,7 +29,7 @@ else:
 # ---------------- Bot Setup ----------------
 intents = discord.Intents.default()
 intents.message_content = True
-bot = commands.Bot(command_prefix='!', intents=intents)
+bot = commands.Bot(command_prefix='?', intents=intents)
 tree = bot.tree
 
 # ---------------- Queues & Volume ----------------
@@ -198,24 +198,23 @@ async def help_cmd(ctx):
     help_text = """
 🎵 *Music Bot Commands* 🎵
 
-*Prefix commands (!):*
-!join - Join your VC
-!leave - Leave VC
-!play <url> - Play music
-!pause - Pause current song
-!resume / !start - Resume song
-!stop - Stop and clear queue
-!skip - Skip current song
-!previous - Play previous song
-!queue - Show current queue
-!volume <0-100> - Set volume
-!help - Show this message
+*Prefix commands (?):*
+?join - Join your VC
+?leave - Leave VC
+?play <url> - Play music
+?pause - Pause current song
+?resume / ?start - Resume song
+?stop - Stop and clear queue
+?skip - Skip current song
+?previous - Play previous song
+?queue - Show current queue
+?volume <0-100> - Set volume
+?help - Show this message
 
 *Slash commands (/):*
 /join, /leave, /play, /pause, /resume, /stop, /skip, /previous, /queue, /volume, /help
 """
     await ctx.send(help_text)
-
 # ---------------- Prefix Commands ----------------
 bot.command()(join_cmd)
 bot.command()(leave_cmd)
@@ -312,3 +311,4 @@ async def on_ready():
 # ---------------- Run Bot ----------------
 
 bot.run(TOKEN)
+
