@@ -5,7 +5,19 @@ import yt_dlp
 import asyncio
 import os
 from dotenv import load_dotenv
+from flask import Flask
+import threading
 
+app = Flask('')
+
+@app.route('/')
+def home():
+    return "Bot is alive!"
+
+def run():
+    app.run(host='0.0.0.0', port=8080)
+
+threading.Thread(target=run).start()
 # ---------------- Load Token ----------------
 load_dotenv()
 TOKEN = os.getenv("DISCORD_TOKEN")
@@ -298,4 +310,5 @@ async def on_ready():
         print(f"Error syncing slash commands: {e}")
 
 # ---------------- Run Bot ----------------
+
 bot.run(TOKEN)
