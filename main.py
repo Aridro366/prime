@@ -12,32 +12,30 @@ import threading
 load_dotenv()
 TOKEN = os.getenv("DISCORD_TOKEN")
 if not TOKEN:
-    raise ValueError("No Discord token found in environment variables")
+    raise ValueError("No Discord token found in .env")
 TOKEN = TOKEN.strip()
 
 # ---------------- Bot Setup ----------------
 intents = discord.Intents.default()
 intents.message_content = True
-bot = commands.Bot(command_prefix="!", intents=intents)  # prefix only needed for internal, not used
+bot = commands.Bot(command_prefix="!", intents=intents)  # prefix not used, just required
 tree = bot.tree
 
 # ---------------- Queues & Volume ----------------
-queues = {}          # Upcoming songs per guild
-previous_songs = {}  # Played songs per guild
-volumes = {}         # Volume per guild (default 0.5)
+queues = {}          # upcoming songs per guild
+previous_songs = {}  # previous songs per guild
+volumes = {}         # volume per guild (default 0.5)
 
 # ---------------- yt-dlp & FFmpeg ----------------
 ytdl_format_options = {
     'format': 'bestaudio/best',
     'quiet': True,
-    'noplaylist': True,
+    'noplaylist': True
 }
-
-ffmpeg_options_template = {
+ffmpeg_options = {
     'before_options': '-reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 5',
     'options': '-vn'
 }
-
 ytdl = yt_dlp.YoutubeDL(ytdl_format_options)
 
 # ---------------- Helper Functions ----------------
@@ -62,15 +60,17 @@ async def play_next(vc, guild_id):
             return
 
         source = discord.PCMVolumeTransformer(
-            discord.FFmpegPCMAudio(info['url'], **ffmpeg_options_template),
+            discord.FFmpegPCMAudio(info['url'], **ffmpeg_options),
             volume=volumes.get(guild_id, 0.5)
         )
         vc.play(source, after=lambda e: asyncio.run_coroutine_threadsafe(play_next(vc, guild_id), bot.loop))
     except:
         await play_next(vc, guild_id)
 
-# ---------------- Slash Command Functions ----------------
-async def join_vc(interaction: discord.Interaction):
+# ---------------- Slash Commands ----------------
+
+@tree.command(name="join", description="Join your voice channel")
+async def join_slash(interaction: discord.Interaction):
     if interaction.user.voice:
         channel = interaction.user.voice.channel
         if interaction.guild.voice_client:
@@ -82,16 +82,19 @@ async def join_vc(interaction: discord.Interaction):
     else:
         await interaction.response.send_message("❌ You must be in a voice channel!", ephemeral=True)
 
-async def leave_vc(interaction: discord.Interaction):
-    if interaction.guild.voice_client:
-        await interaction.guild.voice_client.disconnect()
+@tree.command(name="leave", description="Leave the voice channel")
+async def leave_slash(interaction: discord.Interaction):
+    vc = interaction.guild.voice_client
+    if vc:
+        await vc.disconnect()
         queues[interaction.guild.id] = []
         previous_songs[interaction.guild.id] = []
         await interaction.response.send_message("👋 Left the voice channel.", ephemeral=True)
     else:
         await interaction.response.send_message("❌ I am not in a voice channel.", ephemeral=True)
 
-async def play_song(interaction: discord.Interaction, url: str):
+@tree.command(name="play", description="Play a YouTube URL")
+async def play_slash(interaction: discord.Interaction, url: str):
     guild_id = interaction.guild.id
     queues.setdefault(guild_id, []).append(url)
     previous_songs.setdefault(guild_id, [])
@@ -110,7 +113,8 @@ async def play_song(interaction: discord.Interaction, url: str):
     if not vc.is_playing():
         await play_next(vc, guild_id)
 
-async def pause_song(interaction: discord.Interaction):
+@tree.command(name="pause", description="Pause the music")
+async def pause_slash(interaction: discord.Interaction):
     vc = interaction.guild.voice_client
     if vc and vc.is_playing():
         vc.pause()
@@ -118,7 +122,8 @@ async def pause_song(interaction: discord.Interaction):
     else:
         await interaction.response.send_message("❌ No music is playing.", ephemeral=True)
 
-async def resume_song(interaction: discord.Interaction):
+@tree.command(name="resume", description="Resume the music")
+async def resume_slash(interaction: discord.Interaction):
     vc = interaction.guild.voice_client
     if vc and vc.is_paused():
         vc.resume()
@@ -126,7 +131,8 @@ async def resume_song(interaction: discord.Interaction):
     else:
         await interaction.response.send_message("❌ Music is not paused.", ephemeral=True)
 
-async def stop_song(interaction: discord.Interaction):
+@tree.command(name="stop", description="Stop the music and clear queue")
+async def stop_slash(interaction: discord.Interaction):
     vc = interaction.guild.voice_client
     if vc:
         vc.stop()
@@ -135,7 +141,8 @@ async def stop_song(interaction: discord.Interaction):
     else:
         await interaction.response.send_message("❌ I am not in a voice channel.", ephemeral=True)
 
-async def skip_song(interaction: discord.Interaction):
+@tree.command(name="skip", description="Skip the current song")
+async def skip_slash(interaction: discord.Interaction):
     vc = interaction.guild.voice_client
     if vc and vc.is_playing():
         vc.stop()
@@ -143,7 +150,8 @@ async def skip_song(interaction: discord.Interaction):
     else:
         await interaction.response.send_message("❌ No music is playing.", ephemeral=True)
 
-async def previous_song(interaction: discord.Interaction):
+@tree.command(name="previous", description="Play previous song")
+async def previous_slash(interaction: discord.Interaction):
     guild_id = interaction.guild.id
     vc = interaction.guild.voice_client
     if vc and previous_songs.get(guild_id):
@@ -155,7 +163,8 @@ async def previous_song(interaction: discord.Interaction):
     else:
         await interaction.response.send_message("❌ No previous song available.", ephemeral=True)
 
-async def show_queue(interaction: discord.Interaction):
+@tree.command(name="queue", description="Show the current queue")
+async def queue_slash(interaction: discord.Interaction):
     guild_id = interaction.guild.id
     if queues.get(guild_id):
         msg = "🎵 Current Queue:\n"
@@ -165,7 +174,8 @@ async def show_queue(interaction: discord.Interaction):
     else:
         await interaction.response.send_message("✅ The queue is empty.", ephemeral=True)
 
-async def set_volume(interaction: discord.Interaction, vol: int):
+@tree.command(name="volume", description="Set volume 0-100")
+async def volume_slash(interaction: discord.Interaction, vol: int):
     if vol < 0 or vol > 100:
         await interaction.response.send_message("❌ Volume must be between 0-100.", ephemeral=True)
         return
@@ -176,31 +186,17 @@ async def set_volume(interaction: discord.Interaction, vol: int):
         vc.source.volume = volumes[guild_id]
     await interaction.response.send_message(f"🔊 Volume set to {vol}%", ephemeral=True)
 
-async def help_cmd(interaction: discord.Interaction):
+@tree.command(name="help", description="Show help for all commands")
+async def help_slash(interaction: discord.Interaction):
     embed = discord.Embed(title="🎵 Music Bot Commands", color=0x00ff00)
     embed.add_field(name="Voice Commands", value="/join | /leave", inline=False)
     embed.add_field(name="Music Commands", value="/play <url> | /pause | /resume | /stop | /skip | /previous | /queue | /volume <0-100>", inline=False)
     await interaction.response.send_message(embed=embed, ephemeral=True)
 
-# ---------------- Register Slash Commands ----------------
-tree.add_command(app_commands.Command(name="join", description="Join your voice channel", callback=join_vc))
-tree.add_command(app_commands.Command(name="leave", description="Leave the voice channel", callback=leave_vc))
-tree.add_command(app_commands.Command(name="play", description="Play a YouTube URL", callback=play_song,
-                                      parameters=[app_commands.Parameter(name="url", description="YouTube video URL", type=str)]))
-tree.add_command(app_commands.Command(name="pause", description="Pause the music", callback=pause_song))
-tree.add_command(app_commands.Command(name="resume", description="Resume the music", callback=resume_song))
-tree.add_command(app_commands.Command(name="stop", description="Stop the music and clear queue", callback=stop_song))
-tree.add_command(app_commands.Command(name="skip", description="Skip the current song", callback=skip_song))
-tree.add_command(app_commands.Command(name="previous", description="Play previous song", callback=previous_song))
-tree.add_command(app_commands.Command(name="queue", description="Show the current queue", callback=show_queue))
-tree.add_command(app_commands.Command(name="volume", description="Set volume 0-100", callback=set_volume,
-                                      parameters=[app_commands.Parameter(name="vol", description="Volume percent", type=int)]))
-tree.add_command(app_commands.Command(name="help", description="Show help", callback=help_cmd))
-
 # ---------------- Keep-Alive Flask Server ----------------
 app = Flask("")
 
-@app.route('/')
+@app.route("/")
 def home():
     return "Bot is alive!"
 
@@ -213,8 +209,8 @@ threading.Thread(target=run).start()
 @bot.event
 async def on_ready():
     try:
-        synced = await bot.tree.sync()
-        print(f"Logged in as {bot.user}. Commands synced: {len(synced)}")
+        await tree.sync()
+        print(f"Logged in as {bot.user}. Commands synced successfully!")
     except Exception as e:
         print(f"Error syncing commands: {e}")
 
