@@ -14,7 +14,7 @@ intents = discord.Intents.default()
 intents.message_content = True
 bot = commands.Bot(command_prefix="!", intents=intents)
 
-keep_alive
+keep_alive()
 
 # --- Music Data ---
 guild_queues = {}
@@ -346,3 +346,4 @@ async def volume(interaction: discord.Interaction, level: int):
 
 # --- Run Bot ---
 bot.run(TOKEN)
+
