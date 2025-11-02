@@ -5,7 +5,10 @@ import os, asyncio, json
 from dotenv import load_dotenv
 from motor.motor_asyncio import AsyncIOMotorClient
 import sys, io
+from keep_alive import keep_alive
 
+
+keep_alive()
 sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8')
 
 load_dotenv()
@@ -116,5 +119,6 @@ async def on_command_error(ctx, error):
         raise error
 
 bot.run(TOKEN)
+
 
 
