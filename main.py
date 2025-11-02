@@ -28,22 +28,6 @@ intents = discord.Intents.default()
 intents.message_content = True
 intents.members = True
 intents.guilds = True
-
-from flask import Flask
-from threading import Thread
-
-app = Flask('')
-
-@app.route('/')
-def home():
-    return "✅ Bot is alive!"
-
-def run():
-    app.run(host="0.0.0.0", port=8080)
-
-def keep_alive():
-    t = Thread(target=run)
-    t.start()
     
 class PrimeBot(commands.Bot):
     def __init__(self):
@@ -132,4 +116,5 @@ async def on_command_error(ctx, error):
         raise error
 
 bot.run(TOKEN)
+
 
