@@ -1,4 +1,5 @@
 discord.py
 motor
 python-dotenv
+flask
 aiohttp
